@@ -1,0 +1,26 @@
+[
+  {
+    "model": "hhpnwapi.order_item",
+    "pk": 1,
+    "fields": {
+      "order": 1,
+      "item": 1
+    }
+  },
+  {
+    "model": "hhpnwapi.order_item",
+    "pk": 2,
+    "fields": {
+      "order": 2,
+      "item": 2
+    }
+  },
+  {
+    "model": "hhpnwapi.order_item",
+    "pk": 3,
+    "fields": {
+      "order": 3,
+      "item": 3
+    }
+  }
+]
