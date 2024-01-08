@@ -1,0 +1,38 @@
+[
+  {
+    "model": "hhpnwapi.order",
+    "pk": 1,
+    "fields": {
+      "user": 1,
+      "name": "Dolly Parton",
+      "open": true,
+      "phone": "(615) 543-1290",
+      "email": "dolly@parton.com",
+      "type": "in-person"
+    }
+  },
+  {
+    "model": "hhpnwapi.order",
+    "pk": 2,
+    "fields": {
+      "user": 1,
+      "name": "Doja Cat",
+      "open": false,
+      "phone": "(615) 543-1324",
+      "email": "doja@cat.com",
+      "type": "phone"
+    }
+  },
+  {
+    "model": "hhpnwapi.order",
+    "pk": 3,
+    "fields": {
+      "user": 1,
+      "name": "Freddie O'Connell",
+      "open": true,
+      "phone": "(615) 543-8479",
+      "email": "freddie@oconnell.com",
+      "type": "in-person"
+    }
+  }
+]

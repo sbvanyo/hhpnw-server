@@ -1,0 +1,10 @@
+[
+  {
+    "model": "hhpnwapi.user",
+    "pk": 1,
+    "fields": {
+      "name": "Stacey Vanyo",
+      "uid": "SnMA4wAHBxNjEIH8uf1Uh8H220R2"
+    }
+  }
+]
