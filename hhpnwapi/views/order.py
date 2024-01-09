@@ -3,7 +3,8 @@ from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers, status
-from hhpnwapi.models import Order, User
+from rest_framework.decorators import action
+from hhpnwapi.models import Order, User, Item, OrderItem
 
 
 class OrderView(ViewSet):
@@ -43,7 +44,28 @@ class OrderView(ViewSet):
         return Response(serializer.data)
 
 
+# ADD/REMOVE ORDERITEM
 
+    @action(methods=['post'], detail=True)
+    def add_order_item(self, request, pk):
+        """Post request for a user to add an item to an order"""
+
+        item = Item.objects.get(pk=request.data["item"])
+        order = Order.objects.get(pk=pk)
+        orderitem = OrderItem.objects.create(
+            item=item,
+            order=order
+        )
+        return Response({'message': 'Item added to order'}, status=status.HTTP_201_CREATED)
+
+    @action(methods=['delete'], detail=True)
+    def remove_order_item(self, request, pk):
+        """Delete request for a user to remove an item from an order"""
+
+        orderitem = request.data.get("order_item")
+        OrderItem.objects.filter(pk=orderitem, order__pk=pk).delete()
+
+        return Response("Order item removed", status=status.HTTP_204_NO_CONTENT)
 
 class OrderSerializer(serializers.ModelSerializer):
     """JSON serializer for orders"""
