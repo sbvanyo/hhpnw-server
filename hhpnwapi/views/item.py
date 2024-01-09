@@ -12,7 +12,7 @@ class ItemView(ViewSet):
     def retrieve(self, request, pk):
         """Handle GET requests for single item.
         Returns: Response -- JSON serialized item"""
-        
+
         item = Item.objects.get(pk=pk)
         serializer = ItemSerializer(item)
         return Response(serializer.data)
