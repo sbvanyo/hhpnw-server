@@ -3,7 +3,7 @@ from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers, status
-from hhpnwapi.models import OrderItem
+from hhpnwapi.models import OrderItem, Order, Item
 
 
 class OrderItemView(ViewSet):
@@ -24,7 +24,20 @@ class OrderItemView(ViewSet):
         order_items = OrderItem.objects.all()
         serializer = OrderItemSerializer(order_items, many=True)
         return Response(serializer.data)
+      
+    
+    # def create(self, request):
+    #     """Handle POST operations
+    #     Returns Response -- JSON serialized order instance"""
+    #     order = Order.objects.get(pk=pk)
+    #     item = Item.objects.get(pk=pk)
 
+    #     order_item = Order.objects.create(
+    #         order = order,
+    #         item = item,
+    #     )
+    #     serializer = OrderItemSerializer(order_item)
+    #     return Response(serializer.data)
 
 
 
