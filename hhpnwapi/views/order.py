@@ -44,6 +44,30 @@ class OrderView(ViewSet):
         return Response(serializer.data)
 
 
+    def update(self, request, pk):
+        """Handle PUT requests for an order
+        Returns: Response -- Empty body with 204 status code"""
+
+        order = Order.objects.get(pk=pk)
+        order.name = request.data["name"]
+        order.phone = request.data["phone"]
+        order.email = request.data["email"]
+        order.type = request.data["type"]
+        order.open = request.data["open"]
+
+        order.save()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    def destroy(self, request, pk):
+        """Handle DELETE requests for an order
+        Returns: Response -- Empty body with 204 status code"""
+        order = Order.objects.get(pk=pk)
+        order.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+
 # ADD/REMOVE ORDERITEM
 
     @action(methods=['post'], detail=True)
