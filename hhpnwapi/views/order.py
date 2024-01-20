@@ -1,10 +1,12 @@
 """View module for handling requests about items"""
+from datetime import datetime
 from django.http import HttpResponseServerError
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework import serializers, status
 from rest_framework.decorators import action
-from hhpnwapi.models import Order, User, Item, OrderItem
+from hhpnwapi.models import Order, User, Item, OrderItem, Revenue
+# from order_item import OrderItemSerializer
 
 
 class OrderView(ViewSet):
@@ -40,6 +42,20 @@ class OrderView(ViewSet):
             email=request.data["email"],
             type=request.data["type"],
         )
+
+        # Handling order items
+        items = request.data.get("items", [])
+        for item_data in items:
+            item_id = item_data.get("itemId")
+            quantity = item_data.get("quantity", 0)
+            if item_id is not None and quantity > 0:
+                item = Item.objects.get(pk=item_id)
+                OrderItem.objects.create(
+                    order=order,
+                    item=item,
+                    quantity=quantity
+                )
+
         serializer = OrderSerializer(order)
         return Response(serializer.data)
 
@@ -54,10 +70,58 @@ class OrderView(ViewSet):
         order.email = request.data["email"]
         order.type = request.data["type"]
         order.open = request.data["open"]
-
         order.save()
 
+        # Check if the order is being closed
+        if not order.open and request.data["open"] == False:
+            # Calculate subtotal, tip, and total
+            subtotal = sum(item.quantity * item.item.price for item in OrderItem.objects.filter(order=order))
+            tip = request.data.get("tip", 0)
+            total = subtotal + tip
+
+            # Create a revenue node
+            Revenue.objects.create(
+                order=order,
+                date=datetime.now(),
+                payment=request.data.get("payment", ""),
+                subtotal=subtotal,
+                tip=tip,
+                total=total
+            )
+
+        order.open = request.data["open"]
+        order.save()
+
+        # Process updated item quantities
+        updated_items = request.data.get("items", [])
+        existing_items = {item.item.id: item for item in OrderItem.objects.filter(order=order)}
+
+        # Update or delete existing items, and add new items
+        for item_data in updated_items:
+            item_id = item_data.get("itemId")
+            quantity = item_data.get("quantity", 0)
+
+            if item_id in existing_items:
+                if quantity > 0:
+                    existing_items[item_id].quantity = quantity
+                    existing_items[item_id].save()
+                else:
+                    existing_items[item_id].delete()
+            elif quantity > 0:
+                try:
+                    item = Item.objects.get(pk=item_id)
+                    OrderItem.objects.create(order=order, item=item, quantity=quantity)
+                except Item.DoesNotExist:
+                    # Handle the case where the item does not exist
+                    pass
+
+        # Handle items not included in the updated list (set to 0 in frontend but not sent)
+        for item_id in existing_items:
+            if item_id not in [item['itemId'] for item in updated_items]:
+                existing_items[item_id].delete()
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
     def destroy(self, request, pk):
         """Handle DELETE requests for an order
@@ -75,10 +139,12 @@ class OrderView(ViewSet):
         """Post request for a user to add an item to an order"""
 
         item = Item.objects.get(pk=request.data["item"])
+        quantity = request.data.get("quantity", 0)
         order = Order.objects.get(pk=pk)
         orderitem = OrderItem.objects.create(
             item=item,
-            order=order
+            order=order,
+            quantity=quantity
         )
         return Response({'message': 'Item added to order'}, status=status.HTTP_201_CREATED)
 
@@ -86,13 +152,44 @@ class OrderView(ViewSet):
     def remove_order_item(self, request, pk):
         """Delete request for a user to remove an item from an order"""
 
-        orderitem = request.data.get("order_item")
-        OrderItem.objects.filter(pk=orderitem, order__pk=pk).delete()
+        orderitem_id = request.data.get("order_item")
+        if not orderitem_id:
+            return Response({"error": "Order item ID not provided"}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response("Order item removed", status=status.HTTP_204_NO_CONTENT)
+        try:
+            order_item = OrderItem.objects.get(pk=orderitem_id, order__pk=pk)
+            order_item.delete()
+            return Response({"message": "Order item removed"}, status=status.HTTP_204_NO_CONTENT)
+        except OrderItem.DoesNotExist:
+            return Response({"error": "Order item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    """JSON serializer for order items"""
+
+    price = serializers.ReadOnlyField(source='item.price')
+    name = serializers.ReadOnlyField(source='item.name')
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'order', 'item', 'quantity')
+        depth = 1
 
 class OrderSerializer(serializers.ModelSerializer):
     """JSON serializer for orders"""
+    items = serializers.SerializerMethodField()
     class Meta:
         model = Order
-        fields = ('id', 'user', 'name', 'open', 'phone', 'email', 'type')
+        fields = ('id', 'user', 'name', 'open', 'phone', 'email', 'type', 'items')
+        depth = 1
+
+    # Serializes order items
+    def get_items(self, order):
+        """method for getting all items"""
+        items_data = [
+            {'id': order_item.item.id,
+              'name': order_item.item.name,
+              'price': order_item.item.price,
+              'quantity': order_item.quantity,
+              'order_item_id': order_item.id} 
+            for order_item in order.items.all()]
+        return items_data

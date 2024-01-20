@@ -12,7 +12,7 @@ class RevenueView(ViewSet):
     def retrieve(self, request, pk):
         """Handle GET requests for single revenue.
         Returns: Response -- JSON serialized revenue"""
-        
+
         revenue = Revenue.objects.get(pk=pk)
         serializer = RevenueSerializer(revenue)
         return Response(serializer.data)
