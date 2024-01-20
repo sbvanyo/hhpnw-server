@@ -63,64 +63,75 @@ class OrderView(ViewSet):
     def update(self, request, pk):
         """Handle PUT requests for an order
         Returns: Response -- Empty body with 204 status code"""
+        try:
+            order = Order.objects.get(pk=pk)
 
-        order = Order.objects.get(pk=pk)
-        order.name = request.data["name"]
-        order.phone = request.data["phone"]
-        order.email = request.data["email"]
-        order.type = request.data["type"]
-        order.open = request.data["open"]
-        order.save()
+            # Capture the current 'open' status before updating
+            is_order_currently_open = order.open
 
-        # Check if the order is being closed
-        if not order.open and request.data["open"] == False:
-            # Calculate subtotal, tip, and total
-            subtotal = sum(item.quantity * item.item.price for item in OrderItem.objects.filter(order=order))
-            tip = request.data.get("tip", 0)
-            total = subtotal + tip
+            # Update the order
+            order.name = request.data["name"]
+            order.phone = request.data["phone"]
+            order.email = request.data["email"]
+            order.type = request.data["type"]
+            order.open = request.data["open"]  # This could be 'False' if closing
+            order.save()
 
-            # Create a revenue node
-            Revenue.objects.create(
-                order=order,
-                date=datetime.now(),
-                payment=request.data.get("payment", ""),
-                subtotal=subtotal,
-                tip=tip,
-                total=total
-            )
+            # Check if the order is being closed
+            if is_order_currently_open and not order.open:
+                # Calculate subtotal, tip, and total
+                subtotal = sum(item.quantity * item.item.price for item in OrderItem.objects.filter(order=order))
+                tip = request.data.get("tip", 0)
+                total = subtotal + tip
+                payment = request.data.get("payment", "")
 
-        order.open = request.data["open"]
-        order.save()
+                # Create a revenue node
+                Revenue.objects.create(
+                    order=order,
+                    date=datetime.now(),
+                    payment=payment,
+                    subtotal=subtotal,
+                    tip=tip,
+                    total=total
+                )
 
-        # Process updated item quantities
-        updated_items = request.data.get("items", [])
-        existing_items = {item.item.id: item for item in OrderItem.objects.filter(order=order)}
+            # Process updated item quantities
+            updated_items = request.data.get("items", [])
+            existing_items = {item.item.id: item for item in OrderItem.objects.filter(order=order)}
 
-        # Update or delete existing items, and add new items
-        for item_data in updated_items:
-            item_id = item_data.get("itemId")
-            quantity = item_data.get("quantity", 0)
+            # Update or delete existing items, and add new items
+            for item_data in updated_items:
+                item_id = item_data.get("itemId")
+                quantity = item_data.get("quantity", 0)
 
-            if item_id in existing_items:
-                if quantity > 0:
-                    existing_items[item_id].quantity = quantity
-                    existing_items[item_id].save()
-                else:
+                if item_id in existing_items:
+                    if quantity > 0:
+                        existing_items[item_id].quantity = quantity
+                        existing_items[item_id].save()
+                    else:
+                        existing_items[item_id].delete()
+                elif quantity > 0:
+                    try:
+                        item = Item.objects.get(pk=item_id)
+                        OrderItem.objects.create(order=order, item=item, quantity=quantity)
+                    except Item.DoesNotExist:
+                        # Handle the case where the item does not exist
+                        pass
+
+            # Handle items not included in the updated list (set to 0 in frontend but not sent)
+            for item_id in existing_items:
+                if item_id not in [item['itemId'] for item in updated_items]:
                     existing_items[item_id].delete()
-            elif quantity > 0:
-                try:
-                    item = Item.objects.get(pk=item_id)
-                    OrderItem.objects.create(order=order, item=item, quantity=quantity)
-                except Item.DoesNotExist:
-                    # Handle the case where the item does not exist
-                    pass
 
-        # Handle items not included in the updated list (set to 0 in frontend but not sent)
-        for item_id in existing_items:
-            if item_id not in [item['itemId'] for item in updated_items]:
-                existing_items[item_id].delete()
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            # Log the exception or handle it as appropriate
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+        
 
 
     def destroy(self, request, pk):
