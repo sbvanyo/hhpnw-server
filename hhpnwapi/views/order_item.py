@@ -24,22 +24,6 @@ class OrderItemView(ViewSet):
         order_items = OrderItem.objects.all()
         serializer = OrderItemSerializer(order_items, many=True)
         return Response(serializer.data)
-      
-    
-    # def create(self, request):
-    #     """Handle POST operations
-    #     Returns Response -- JSON serialized order instance"""
-    #     order = Order.objects.get(pk=pk)
-    #     item = Item.objects.get(pk=pk)
-
-    #     order_item = Order.objects.create(
-    #         order = order,
-    #         item = item,
-    #     )
-    #     serializer = OrderItemSerializer(order_item)
-    #     return Response(serializer.data)
-
-
 
 class OrderItemSerializer(serializers.ModelSerializer):
     """JSON serializer for order items"""

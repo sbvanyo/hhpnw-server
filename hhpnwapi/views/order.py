@@ -105,31 +105,33 @@ class OrderView(ViewSet):
                 quantity = item_data.get("quantity", 0)
 
                 if item_id in existing_items:
+                    # Update the existing item quantity
                     if quantity > 0:
                         existing_items[item_id].quantity = quantity
                         existing_items[item_id].save()
-                    else:
-                        existing_items[item_id].delete()
-                elif quantity > 0:
-                    try:
-                        item = Item.objects.get(pk=item_id)
-                        OrderItem.objects.create(order=order, item=item, quantity=quantity)
-                    except Item.DoesNotExist:
-                        # Handle the case where the item does not exist
-                        pass
+
+                else:
+                    # Add new items
+                    if quantity > 0:
+                        try:
+                            item = Item.objects.get(pk=item_id)
+                            OrderItem.objects.create(order=order, item=item, quantity=quantity)
+                        except Item.DoesNotExist:
+                            # Handle the case where the item does not exist
+                            pass
 
             # Handle items not included in the updated list (set to 0 in frontend but not sent)
             for item_id in existing_items:
-                if item_id not in [item['itemId'] for item in updated_items]:
+                if item_id not in [item.get('itemId') for item in updated_items]:
                     existing_items[item_id].delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         except Order.DoesNotExist:
             return Response({"error": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            # Log the exception or handle it as appropriate
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # except Exception as e:
+        #     # Log the exception or handle it as appropriate
+        #     return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
         
 
