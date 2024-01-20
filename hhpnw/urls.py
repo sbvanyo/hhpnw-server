@@ -24,7 +24,7 @@ router = routers.DefaultRouter(trailing_slash=False)
 router.register(r'items', ItemView, 'item')
 router.register(r'orders', OrderView, 'order')
 router.register(r'orderitems', OrderItemView, 'orderitem')
-router.register(r'revenues', RevenueView, 'revenue')
+router.register(r'revenue', RevenueView, 'revenue')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

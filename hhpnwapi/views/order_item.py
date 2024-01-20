@@ -45,5 +45,5 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """JSON serializer for order items"""
     class Meta:
         model = OrderItem
-        fields = ('id', 'order', 'item')
+        fields = ('id', 'order', 'item', 'quantity')
         depth = 1
